@@ -1,70 +1,95 @@
 //===sleepingStylistSem.c=============//
+//Imports
+#include <stdio.h>
+#include <semaphore.h>
+#include <pthread.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+
 #define CHAIRS 7
 #define DELAY 1000000  //adjust this value
 #define STYLIST 1
 #define CUSTOMER 120
 
-/*
-1. one stylist ---> one customer
-2. No customer ----> stylist sleeps 
-3. Customer wakes up stylist ---> stylist gets ready
-4. Stylist busy  ----> Customer sits on chair ( queue )
-5. Chairs full ----> Customer go to mall ---> comeback later (suspend)
-6. Every customer should get haircut( Task must be completed )
-7. Customer must be taken form queue
-8. If queue is empty stylist must go to sleep 
-**/
-
-typedef int semaphore;
-
 //Mutual extension
-semaphore mutex = 1;
-//#Number of stylist waiting for customers 
-semaphore stylist = 0;
+sem_t mutex;
+//Number of stylist waiting for customers 
+sem_t stylist;
 //Number of waiting for service
-semaphore customers = 0;
+sem_t customers;
+
+//Define Thread
+pthread_t stylistThread;
+pthread_t customerThread[CUSTOMER];
 
 //Customer waiting
 int waiting = 0;
 
-void main( void )
-{
-    //Create a specified number of customer thread 
-    //and a stylist thread. Don't forget to join thread
+void *stylist_func( void *stylistId );
+void *customer( void *customerId );
+
+int main()
+{   
+    //Initialize semaphore
+    sem_init( &mutex, 0 , 1);
+    sem_init( &stylist, 0, 1);
+    sem_init( &customers, 0, CUSTOMER);
+
+    //Stylist
+    pthread_create( &stylistThread, NULL, (void *)stylist_func, NULL );
+
+    int i;
+    //Customer
+    for(i=0; i < CUSTOMER; i++){
+        pthread_create( &customerThread[i], NULL, (void *)customer, i );
+    }
+
+    int j;
+    for(j=0; j< CUSTOMER; j++){
+        pthread_join( customerThread[j], NULL );
+    }
+    return 0;
 }
 
-void stylist( void )
+void *stylist_func( void *stylistId )
 {
     int j;
     while (1)
     {
         
-        down( &customers ); //stylist go to sleep if customer is 0
-        down( &mutex ); //Acquire access for waiting
-        waiting = waiting - 1  //decreament count of waiting customer 
-        up( &stylist ); // stylist is ready to cut hairs
-        up( &mutex ); //release waiting
+        sem_wait( &customers ); //stylist go to sleep if customer is 0
+        sem_wait( &mutex ); //Acquire access for waiting
+        waiting = waiting - 1;  //decreament count of waiting customer
+        printf("Stylist is serving a Customer\n");
+        sem_post( &stylist ); // stylist is ready to cut hairs
+        sem_post( &mutex ); //release waiting
         for( j=0; j<DELAY; j++ ); //cut hair
-
+        
     }
 }
 
-void customer( void )
+void *customer( void *tempCustomerId )
 {
+    int customerId = ( int* )tempCustomerId;
     int j;
     while(1)
     {
-        down(&mutex);
+        sem_wait(&mutex);
         if( waiting < CHAIRS )
-        {
+        {   
+            printf("Customer %d is waiting in chair\n", customerId);
             waiting = waiting + 1;
-            up( &customers );
-            up( &mutex );  
-            down( &stylist )
+            sem_post( &customers );
+            sem_post( &mutex );  
+            sem_wait( &stylist );
             break;
+
         }else{
-            up( &mutex );
-            for( j=0; j<DELAY ; j++); //go shopping  
+            sem_post( &mutex );
+            for( j=0; j<DELAY ; j++); //go shopping
+            //printf("Customer %d went for shopping \n", customerId);
+
         }
     }
 }
