@@ -26,6 +26,8 @@ pthread_t customerThread[CUSTOMER];
 //Customer waiting
 int waiting = 0;
 
+int customerServed = 0;
+
 void *stylist_func( void *stylistId );
 void *customer( void *customerId );
 
@@ -33,8 +35,8 @@ int main()
 {   
     //Initialize semaphore
     sem_init( &mutex, 0 , 1);
-    sem_init( &stylist, 0, 1);
-    sem_init( &customers, 0, CUSTOMER);
+    sem_init( &stylist, 0, 0);
+    sem_init( &customers, 0, 0);
 
     //Stylist
     pthread_create( &stylistThread, NULL, (void *)stylist_func, NULL );
@@ -49,6 +51,8 @@ int main()
     for(j=0; j< CUSTOMER; j++){
         pthread_join( customerThread[j], NULL );
     }
+   // pthread_join( stylistThread, NULL );
+    printf("Total customer served today: %d\n", customerServed++);
     return 0;
 }
 
@@ -65,6 +69,7 @@ void *stylist_func( void *stylistId )
         sem_post( &stylist ); // stylist is ready to cut hairs
         sem_post( &mutex ); //release waiting
         for( j=0; j<DELAY; j++ ); //cut hair
+	customerServed++;
         
     }
 }
