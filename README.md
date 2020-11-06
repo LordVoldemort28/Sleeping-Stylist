@@ -1,6 +1,8 @@
 Sleeping stylist with Semaphore 
 -------------------------------
 
+![](https://cdn.shopify.com/s/files/1/0065/4917/6438/products/a-small-boy-having-a-great-sleep-and-inside-a-barber-shop-background_1200x1200.jpg?v=1534171447)
+
 __Rules:__
 * One stylist &rarr; one customer
 * No customer &rarr; stylist sleeps 
